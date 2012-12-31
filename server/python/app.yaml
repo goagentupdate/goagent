@@ -12,6 +12,10 @@ handlers:
 - url: /2
   script: wsgi.gae_application
   secure: optional
+  
+- url: /version
+  script: wsgi.gae_get
+  secure: optional
 
 - url: /robots.txt
   static_files: robots.txt
