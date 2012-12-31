@@ -1070,7 +1070,7 @@ def gaeproxy_handler(sock, address, hls={'setuplock':gevent.coros.Semaphore()}):
         host, _, port = path.rpartition(':')
         port = int(port)
         if host.endswith(common.GOOGLE_SITES) and host not in common.GOOGLE_WITHGAE and common.GAE_OPENFWD == 1:
-            logging.info('%s:%s "FWD %s %s:%d HTTP/1.1" - -' % (remote_addr, remote_port, method, host, port))
+            logging.info('%s:%s FWD "%s %s:%d HTTP/1.1" - -' % (remote_addr, remote_port, method, host, port))
             http_headers = ''.join('%s: %s\r\n' % (k, v) for k, v in headers.iteritems())
             sock.send('HTTP/1.1 200 OK\r\n\r\n')
             if not common.PROXY_ENABLE:
@@ -1159,7 +1159,7 @@ def gaeproxy_handler(sock, address, hls={'setuplock':gevent.coros.Semaphore()}):
                 return
             if response.status in (400, 405):
                 common.GAE_CRLF = 0
-            logging.info('%s:%s "FWD %s %s HTTP/1.1" %s %s' % (remote_addr, remote_port, method, path, response.status, response.msg.get('Content-Length', '-')))
+            logging.info('%s:%s FWD "%s %s HTTP/1.1" %s %s' % (remote_addr, remote_port, method, path, response.status, response.msg.get('Content-Length', '-')))
             wfile = sock.makefile('wb', 0)
             wfile.write('HTTP/1.1 %s\r\n%s\r\n' % (response.status, ''.join('%s: %s\r\n' % (k.title(), v) for k, v in response.getheaders() if k != 'transfer-encoding')))
             wfile.write(response.read())
