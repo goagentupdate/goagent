@@ -687,7 +687,8 @@ class Common(object):
         self.GAE_PATH             = self.CONFIG.get('gae', 'path') if self.CONFIG.has_option('gae', 'path') else '/2'
         self.GAE_PROFILE          = self.CONFIG.get('gae', 'profile') if self.CONFIG.has_option('gae', 'profile') else 'google_cn'
         self.GAE_CRLF             = self.CONFIG.getint('gae', 'crlf') if self.CONFIG.has_option('gae', 'crlf') else 1
-        self.GAE_AUTOSWITCH        = self.CONFIG.getint('gae', 'autoswitch') if self.CONFIG.has_option('gae', 'autoswitch') else 1
+        self.GAE_AUTOSWITCH       = self.CONFIG.getint('gae', 'autoswitch') if self.CONFIG.has_option('gae', 'autoswitch') else 1
+        self.GAE_OPENFWD          = self.CONFIG.getint('gae', 'openfwd') if self.CONFIG.has_option('gae', 'openfwd') else 1
 
         self.PAAS_ENABLE           = self.CONFIG.getint('paas', 'enable') if self.CONFIG.has_option('paas', 'enable') else 0
         self.PAAS_LISTEN           = self.CONFIG.get('paas', 'listen') if self.CONFIG.has_option('paas', 'listen') else '127.0.0.1:8088'
@@ -704,28 +705,28 @@ class Common(object):
             self.DNS_ENABLE = 0
 
         if self.CONFIG.has_section('socks5'):
-            self.SOCKS5_ENABLE           = self.CONFIG.getint('socks5', 'enable')
-            self.SOCKS5_LISTEN           = self.CONFIG.get('socks5', 'listen')
-            self.SOCKS5_PASSWORD         = self.CONFIG.get('socks5', 'password')
-            self.SOCKS5_FETCHSERVER      = self.CONFIG.get('socks5', 'fetchserver')
+            self.SOCKS5_ENABLE           = self.CONFIG.getint('socks5', 'enable') if self.CONFIG.has_option('socks5', 'enable') else 0
+            self.SOCKS5_LISTEN           = self.CONFIG.get('socks5', 'listen') if self.CONFIG.has_option('socks5', 'listen') else ''
+            self.SOCKS5_PASSWORD         = self.CONFIG.get('socks5', 'password') if self.CONFIG.has_option('socks5', 'password') else '127.0.0.1:8089'
+            self.SOCKS5_FETCHSERVER      = self.CONFIG.get('socks5', 'fetchserver') if self.CONFIG.has_option('socks5', 'fetchserver') else 'http://.me:23/'
         else:
             self.SOCKS5_ENABLE           = 0
 
         if self.CONFIG.has_section('pac'):
             # XXX, cowork with GoAgentX
-            self.PAC_ENABLE           = self.CONFIG.getint('pac','enable')
-            self.PAC_IP               = self.CONFIG.get('pac','ip')
-            self.PAC_PORT             = self.CONFIG.getint('pac','port')
-            self.PAC_FILE             = self.CONFIG.get('pac','file').lstrip('/')
-            self.PAC_GFWLIST          = self.CONFIG.get('pac', 'gfwlist')
+            self.PAC_ENABLE           = self.CONFIG.getint('pac','enable') if self.CONFIG.has_option('pac','enable') else 1
+            self.PAC_IP               = self.CONFIG.get('pac','ip') if self.CONFIG.has_option('pac','ip') else '127.0.0.1'
+            self.PAC_PORT             = self.CONFIG.getint('pac','port') if self.CONFIG.has_option('pac','port') else 8086
+            self.PAC_FILE             = self.CONFIG.get('pac','file').lstrip('/') if self.CONFIG.has_option('pac','file') else 'proxy.pac'.lstrip('/')
+            self.PAC_GFWLIST          = self.CONFIG.get('pac', 'gfwlist') if self.CONFIG.has_option('pac','enable') else 'http://autoproxy-gfwlist.googlecode.com/svn/trunk/gfwlist.txt'
         else:
             self.PAC_ENABLE           = 0
 
-        self.PROXY_ENABLE         = self.CONFIG.getint('proxy', 'enable')
-        self.PROXY_HOST           = self.CONFIG.get('proxy', 'host')
-        self.PROXY_PORT           = self.CONFIG.getint('proxy', 'port')
-        self.PROXY_USERNAME       = self.CONFIG.get('proxy', 'username')
-        self.PROXY_PASSWROD       = self.CONFIG.get('proxy', 'password')
+        self.PROXY_ENABLE         = self.CONFIG.getint('proxy', 'enable') if self.CONFIG.has_option('proxy', 'enable') else 0
+        self.PROXY_HOST           = self.CONFIG.get('proxy', 'host') if self.CONFIG.has_option('proxy', 'host') else '10.64.1.63'
+        self.PROXY_PORT           = self.CONFIG.getint('proxy', 'port') if self.CONFIG.has_option('proxy', 'port') else 8080
+        self.PROXY_USERNAME       = self.CONFIG.get('proxy', 'username') if self.CONFIG.has_option('proxy', 'username') else ''
+        self.PROXY_PASSWROD       = self.CONFIG.get('proxy', 'password') if self.CONFIG.has_option('proxy', 'password') else ''
 
         if self.PROXY_ENABLE:
             if self.PROXY_USERNAME:
@@ -1068,7 +1069,7 @@ def gaeproxy_handler(sock, address, hls={'setuplock':gevent.coros.Semaphore()}):
         """direct forward CONNECT request"""
         host, _, port = path.rpartition(':')
         port = int(port)
-        if host.endswith(common.GOOGLE_SITES) and host not in common.GOOGLE_WITHGAE:
+        if host.endswith(common.GOOGLE_SITES) and host not in common.GOOGLE_WITHGAE and common.GAE_OPENFWD == 1:
             logging.info('%s:%s "FWD %s %s:%d HTTP/1.1" - -' % (remote_addr, remote_port, method, host, port))
             http_headers = ''.join('%s: %s\r\n' % (k, v) for k, v in headers.iteritems())
             sock.send('HTTP/1.1 200 OK\r\n\r\n')
@@ -1106,7 +1107,7 @@ def gaeproxy_handler(sock, address, hls={'setuplock':gevent.coros.Semaphore()}):
         else:
             """deploy fake cert to client"""
             keyfile, certfile = CertUtil.get_cert(host)
-            logging.info('%s:%s "%s %s:%d HTTP/1.1" - -' % (remote_addr, remote_port, method, host, port))
+            logging.info('%s:%s "GAE %s %s:%d HTTP/1.1" - -' % (remote_addr, remote_port, method, host, port))
             sock.sendall('HTTP/1.1 200 OK\r\n\r\n')
             __realsock = sock
             __realrfile = rfile
@@ -1147,7 +1148,7 @@ def gaeproxy_handler(sock, address, hls={'setuplock':gevent.coros.Semaphore()}):
             logging.info('crlf dns_resolve(host=%r) return %s', host, list(http.dns[host]))
         need_direct = True
 
-    if need_direct:
+    if need_direct and common.GAE_OPENFWD == 1:
         """direct http forward"""
         try:
             content_length = int(headers.get('Content-Length', 0))
@@ -1233,7 +1234,7 @@ def gaeproxy_handler(sock, address, hls={'setuplock':gevent.coros.Semaphore()}):
             wfile = sock.makefile('wb', 0)
 
             if response.app_status != 200:
-                logging.info('%s:%s "%s %s HTTP/1.1" %s -' % (remote_addr, remote_port, method, path, response.status))
+                logging.info('%s:%s "GAE %s %s HTTP/1.1" %s -' % (remote_addr, remote_port, method, path, response.status))
                 wfile.write('HTTP/1.1 %s\r\n%s\r\n' % (response.status, ''.join('%s: %s\r\n' % (k.title(), v) for k, v in response.getheaders() if k != 'transfer-encoding')))
                 wfile.write(response.read())
                 response.close()
@@ -1324,7 +1325,7 @@ def paasproxy_handler(sock, address, hls={'setuplock':gevent.coros.Semaphore()})
         host, _, port = path.rpartition(':')
         port = int(port)
         keyfile, certfile = CertUtil.get_cert(host)
-        logging.info('%s:%s "%s:%d HTTP/1.1" - -' % (address[0], address[1], host, port))
+        logging.info('%s:%s "PAAS %s:%d HTTP/1.1" - -' % (address[0], address[1], host, port))
         sock.sendall('HTTP/1.1 200 OK\r\n\r\n')
         __realsock = sock
         __realrfile = rfile
@@ -1547,12 +1548,12 @@ def pacserver_handler(sock, address, hls={}):
     if path != '/'+common.PAC_FILE or not os.path.isfile(filename):
         wfile.write('HTTP/1.1 404\r\nContent-Type: text/plain\r\nConnection: close\r\n\r\n404 Not Found')
         wfile.close()
-        logging.info('%s:%s "%s %s HTTP/1.1" 404 -' % (remote_addr, remote_port, method, path))
+        logging.info('%s:%s "PAC %s %s HTTP/1.1" 404 -' % (remote_addr, remote_port, method, path))
         return
     with open(filename, 'rb') as fp:
         data = fp.read()
         wfile.write('HTTP/1.1 200\r\nContent-Type: application/x-ns-proxy-autoconfig\r\nConnection: close\r\n\r\n')
-        logging.info('%s:%s "%s %s HTTP/1.1" 200 -' % (remote_addr, remote_port, method, path))
+        logging.info('%s:%s "PAC %s %s HTTP/1.1" 200 -' % (remote_addr, remote_port, method, path))
         wfile.write(data)
         wfile.close()
     sock.close()
